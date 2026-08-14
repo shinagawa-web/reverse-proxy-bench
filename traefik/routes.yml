@@ -1,0 +1,13 @@
+http:
+  routers:
+    app:
+      entryPoints:
+        - web
+      rule: PathPrefix(`/`)
+      service: app
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: http://backend:8080
