@@ -1,0 +1,62 @@
+name: Bench
+
+on:
+  pull_request:
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Build backend
+        run: docker build -t backend ./backend
+
+      - name: Bench nginx
+        run: |
+          docker compose -f nginx/docker-compose.yml up -d
+          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
+          k6 run -e PROXY=nginx -e TARGET_URL=http://localhost:8080 bench/load.js
+          docker compose -f nginx/docker-compose.yml down -v
+
+      - name: Bench caddy
+        run: |
+          docker compose -f caddy/docker-compose.yml up -d
+          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
+          k6 run -e PROXY=caddy -e TARGET_URL=http://localhost:8080 bench/load.js
+          docker compose -f caddy/docker-compose.yml down -v
+
+      - name: Bench traefik
+        run: |
+          docker compose -f traefik/docker-compose.yml up -d
+          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
+          k6 run -e PROXY=traefik -e TARGET_URL=http://localhost:8080 bench/load.js
+          docker compose -f traefik/docker-compose.yml down -v
+
+      - name: Bench haproxy
+        run: |
+          docker compose -f haproxy/docker-compose.yml up -d
+          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
+          k6 run -e PROXY=haproxy -e TARGET_URL=http://localhost:8080 bench/load.js
+          docker compose -f haproxy/docker-compose.yml down -v
+
+      - name: Generate summary
+        run: bash scripts/summarize.sh > bench-summary.md
+
+      - name: Post PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: bench
+          path: bench-summary.md

@@ -1,0 +1,13 @@
+services:
+  traefik:
+    image: traefik:v3.2
+    ports:
+      - "8080:80"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./routes.yml:/etc/traefik/routes.yml:ro
+
+  backend:
+    image: backend
+    expose:
+      - "8080"

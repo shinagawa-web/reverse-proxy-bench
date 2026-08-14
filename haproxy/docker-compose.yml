@@ -1,0 +1,14 @@
+services:
+  backend:
+    image: backend
+    expose:
+      - "8080"
+
+  haproxy:
+    image: haproxy:3.1-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - backend
