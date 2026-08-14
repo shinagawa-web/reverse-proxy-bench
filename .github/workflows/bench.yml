@@ -3,6 +3,9 @@ name: Bench
 on:
   pull_request:
 
+permissions:
+  pull-requests: write
+
 jobs:
   bench:
     runs-on: ubuntu-latest
@@ -54,6 +57,12 @@ jobs:
 
       - name: Generate summary
         run: bash scripts/summarize.sh > bench-summary.md
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-summary
+          path: bench-summary.md
 
       - name: Post PR comment
         uses: marocchino/sticky-pull-request-comment@v2
