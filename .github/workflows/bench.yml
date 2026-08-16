@@ -9,6 +9,9 @@ permissions:
 jobs:
   bench:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        proxy: [nginx, caddy, traefik, haproxy]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,38 +30,36 @@ jobs:
       - name: Build backend
         run: docker build -t backend ./backend
 
-      - name: Bench nginx
+      - name: Bench ${{ matrix.proxy }}
         run: |
-          docker compose -f nginx/docker-compose.yml up -d
+          docker compose -f ${{ matrix.proxy }}/docker-compose.yml up -d
           timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
-          k6 run -e PROXY=nginx -e TARGET_URL=http://localhost:8080 bench/load.js
-          docker compose -f nginx/docker-compose.yml down -v
+          k6 run -e PROXY=${{ matrix.proxy }} -e TARGET_URL=http://localhost:8080 bench/load.js
+          docker compose -f ${{ matrix.proxy }}/docker-compose.yml down -v
 
-      - name: Bench caddy
-        run: |
-          docker compose -f caddy/docker-compose.yml up -d
-          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
-          k6 run -e PROXY=caddy -e TARGET_URL=http://localhost:8080 bench/load.js
-          docker compose -f caddy/docker-compose.yml down -v
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.proxy }}
+          path: /tmp/bench-${{ matrix.proxy }}.json
 
-      - name: Bench traefik
-        run: |
-          docker compose -f traefik/docker-compose.yml up -d
-          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
-          k6 run -e PROXY=traefik -e TARGET_URL=http://localhost:8080 bench/load.js
-          docker compose -f traefik/docker-compose.yml down -v
+  summarize:
+    needs: bench
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Bench haproxy
-        run: |
-          docker compose -f haproxy/docker-compose.yml up -d
-          timeout 30 bash -c 'until curl -sf http://localhost:8080/ping > /dev/null; do sleep 1; done'
-          k6 run -e PROXY=haproxy -e TARGET_URL=http://localhost:8080 bench/load.js
-          docker compose -f haproxy/docker-compose.yml down -v
+      - name: Download results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          merge-multiple: true
+          path: /tmp
 
       - name: Generate summary
         run: bash scripts/summarize.sh > bench-summary.md
 
-      - name: Upload results
+      - name: Upload summary
         uses: actions/upload-artifact@v4
         with:
           name: bench-summary
