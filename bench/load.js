@@ -21,7 +21,7 @@ export function handleSummary(data) {
       p50: m.http_req_duration.values['p(50)'].toFixed(2),
       p95: m.http_req_duration.values['p(95)'].toFixed(2),
       p99: m.http_req_duration.values['p(99)'].toFixed(2),
-      errors: m.http_req_failed.values.rate.toFixed(4),
+      errors: (m.http_req_failed.values.rate * 100).toFixed(2) + '%',
     }),
   };
 }
