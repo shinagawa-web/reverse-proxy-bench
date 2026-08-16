@@ -23,4 +23,6 @@ for proxy in nginx caddy traefik haproxy; do
 done
 
 echo ""
-echo "> GitHub Actions runner: ubuntu-latest (2 vCPU, 7 GB RAM)"
+cpu=$(nproc)
+mem=$(awk '/MemTotal/ { printf "%.0f GB", $2/1024/1024 }' /proc/meminfo)
+echo "> GitHub Actions runner: ubuntu-latest (${cpu} vCPU, ${mem} RAM)"
