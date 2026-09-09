@@ -1,7 +1,5 @@
 # reverse-proxy-bench
 
-Companion repository for the article **[Nginx, Caddy, Traefik, or HAProxy: How to Pick the Right Reverse Proxy for Your Stack (2026)](https://dev.to/shinagawa-web/nginx-caddy-traefik-or-haproxy-how-to-pick-the-right-reverse-proxy-for-your-stack-2026-2doj)**.
-
 Each directory contains a config file and a `docker-compose.yml` for one proxy, all routing to the same Go backend.
 
 ## Articles and CI runs
